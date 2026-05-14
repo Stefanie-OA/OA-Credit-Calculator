@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OA Sales Hub — Credit Calculator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Calibri, 'Segoe UI', Arial, sans-serif;
+      background: #f0f4f8;
+      padding: 24px 16px;
+      min-height: 100vh;
+    }
+
+    .page-title {
+      color: #1F4E79;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      opacity: 0.7;
+    }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 4px; }
+
+    .tab-btn {
+      padding: 10px 22px;
+      border: none;
+      border-radius: 6px 6px 0 0;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: inherit;
+      background: #D0DFF0;
+      color: #555;
+      letter-spacing: 0.3px;
+      transition: background 0.15s;
+    }
+
+    .tab-btn.firms-active { background: #2E75B6; color: white; }
+    .tab-btn.jobs-active  { background: #375623; color: white; }
+
+    /* Tab panes */
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    /* Calculator wrapper */
+    .calc-wrap {
+      background: white;
+      border-radius: 0 8px 8px 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.10);
+      max-width: 980px;
+    }
+
+    .title-bar {
+      background: #1F4E79;
+      color: white;
+      font-size: 15px;
+      font-weight: 700;
+      padding: 14px 18px;
+      letter-spacing: 0.2px;
+    }
+
+    /* Table base */
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    td, th { padding: 7px 10px; border: 1px solid #D4D4D4; }
+
+    /* Section headers */
+    .sec-hdr td {
+      color: white;
+      font-weight: 700;
+      font-size: 12px;
+      padding: 8px 12px;
+      letter-spacing: 0.5px;
+      border-color: transparent;
+    }
+
+    /* Sub-section headers */
+    .sub-hdr td {
+      font-weight: 700;
+      font-size: 12px;
+      padding: 6px 12px;
+    }
+
+    /* Column header row */
+    .col-hdr th {
+      background: #BDD7EE;
+      font-weight: 700;
+      font-size: 11px;
+      text-align: center;
+      color: #1F1F1F;
+    }
+    .col-hdr th:first-child { text-align: left; }
+    .col-hdr th:last-child  { text-align: left; }
+
+    /* Subscription row */
+    .sub-row td            { background: #DEEAF1; }
+    .sub-row .lbl          { font-weight: 700; }
+    .sub-row .price        { font-weight: 700; text-align: center; }
+    .sub-row .note         { color: #595959; font-style: italic; font-size: 11px; text-align: center; }
+    .sub-row .credits-val  { font-weight: 700; font-size: 15px; text-align: center; }
+    .sub-row .unit         { color: #595959; font-style: italic; font-size: 11px; }
+
+    /* Activity rows */
+    .act-row td { background: white; vertical-align: middle; }
+
+    /* Yellow input */
+    input.qty {
+      width: 86px;
+      padding: 5px 8px;
+      text-align: center;
+      border: 1px solid #C9A800;
+      border-radius: 3px;
+      background: #FFF2CC;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      display: block;
+      margin: 0 auto;
+    }
+    input.qty:focus {
+      outline: none;
+      border-color: #2E75B6;
+      box-shadow: 0 0 0 2px rgba(46,117,182,0.18);
+    }
+    /* Hide number spin arrows */
+    input.qty::-webkit-inner-spin-button,
+    input.qty::-webkit-outer-spin-button { -webkit-appearance: none; }
+    input.qty { -moz-appearance: textfield; }
+
+    .row-total {
+      background: #E2EFDA;
+      font-weight: 700;
+      text-align: center;
+      color: #1A4731;
+    }
+
+    /* Helpers */
+    .tc  { text-align: center; }
+    .gray { color: #595959; font-style: italic; font-size: 11px; }
+    .dg  { color: #375623; font-weight: 700; }
+
+    /* Credit summary */
+    .cs-ttl td          { background: #DEEAF1; }
+    .cs-ttl .lbl        { font-weight: 700; font-size: 13px; }
+    .cs-ttl .val        { font-weight: 700; font-size: 16px; text-align: center; }
+    .cs-inc td          { background: white; }
+    .cs-inc .val        { text-align: center; }
+    .cs-add td          { background: white; }
+    .cs-add .lbl        { font-weight: 700; }
+    .cs-add .val        { font-weight: 700; text-align: center; }
+
+    /* Package rows */
+    .pkg td              { text-align: center; }
+    .pkg:nth-child(odd) td  { background: white; }
+    .pkg:nth-child(even) td { background: #F2F2F2; }
+    .pkg.best td         { background: #FFF2CC !important; }
+    .pkg .rec            { text-align: left; color: #C55A11; font-weight: 700; font-size: 12px; }
+    .pkg .disc           { color: #375623; font-weight: 700; }
+    .pkg .no-disc        { color: #595959; }
+    .pkg .per-cr         { color: #595959; font-size: 11px; }
+
+    /* Overflow warning */
+    .overflow-warn { display: none; }
+    .overflow-warn td {
+      background: #FFF0E6;
+      color: #C55A11;
+      font-weight: 700;
+      text-align: center;
+      font-size: 11px;
+      padding: 8px 12px;
+    }
+
+    /* Cost section */
+    .cost-sub td          { background: #DEEAF1; }
+    .cost-sub .val        { text-align: center; font-weight: 600; }
+    .cost-add td          { background: white; }
+    .cost-add .val        { text-align: center; font-weight: 600; }
+    .cost-add .side-note  { color: #595959; font-size: 10px; font-style: italic; }
+    .cost-ttl td          { background: #1F4E79; color: white; border-color: #1F4E79; }
+    .cost-ttl .lbl        { font-weight: 700; font-size: 13px; }
+    .cost-ttl .val        { font-size: 20px; font-weight: 700; text-align: center; }
+
+    /* Spacer */
+    .sp td { border: none; padding: 5px; background: white; }
+
+    @media (max-width: 640px) {
+      body { padding: 10px 6px; }
+      .tab-btn { padding: 8px 12px; font-size: 12px; }
+      td, th { padding: 5px 6px; font-size: 11px; }
+      input.qty { width: 64px; }
+    }
+  </style>
+</head>
+<body>
+
+<p class="page-title">Outsource Accelerator &nbsp;·&nbsp; Sales Hub</p>
+
+<div class="tabs">
+  <button class="tab-btn firms-active" onclick="switchTab('firms')">Explore by Firms</button>
+  <button class="tab-btn"             onclick="switchTab('jobs')">Explore by Jobs</button>
+</div>
+
+<!-- ═══════════════════════════════ FIRMS TAB ═══════════════════════════════ -->
+<div id="firms" class="tab-pane active">
+  <div class="calc-wrap">
+    <div class="title-bar">OA Sales Hub — Credit Calculator &nbsp;|&nbsp; Explore by Firms</div>
+    <table>
+
+      <!-- Monthly Subscription -->
+      <tr class="sec-hdr"><td colspan="6" style="background:#2E75B6">MONTHLY SUBSCRIPTION</td></tr>
+      <tr class="sub-row">
+        <td class="lbl">Sales Hub Base Plan</td>
+        <td class="price">$199 / month</td>
+        <td class="note">Includes 5,000 credits</td>
+        <td></td>
+        <td class="credits-val">5,000</td>
+        <td class="unit">credits / month</td>
+      </tr>
+      <tr class="sp"><td colspan="6"></td></tr>
+
+      <!-- Activity Planner -->
+      <tr class="sec-hdr"><td colspan="6" style="background:#2E75B6">ACTIVITY PLANNER — Enter quantities in the yellow cells</td></tr>
+      <tr class="col-hdr">
+        <th>Activity</th><th>Quantity</th><th>Unit</th><th>Credits / Unit</th><th>Total Credits</th><th>Notes</th>
+      </tr>
+
+      <tr class="sub-hdr"><td colspan="6" style="background:#E8F0FE;color:#1F4E79">&nbsp;&nbsp;▶&nbsp; EXPLORE BY FIRMS</td></tr>
+      <tr class="act-row" data-calc="ceiling" data-credits="5">
+        <td>Companies to Find</td>
+        <td><input type="number" class="qty" value="0" min="0" oninput="calculate('firms')"></td>
+        <td class="tc gray">companies</td>
+        <td class="tc gray">5 / 100</td>
+        <td class="row-total">0</td>
+        <td class="gray">5 credits per 100 companies (rounds up)</td>
+      </tr>
+
+      <tr class="sub-hdr"><td colspan="6" style="background:#EFFFEF;color:#1A4731">&nbsp;&nbsp;▶&nbsp; ENRICHMENT &amp; OUTREACH</td></tr>
+      <tr class="act-row" data-calc="multiply" data-credits="4">
+        <td>Enrich Company Data</td>
+        <td><input type="number" class="qty" value="0" min="0" oninput="calculate('firms')"></td>
+        <td class="tc gray">companies</td>
+        <td class="tc">4</td>
+        <td class="row-total">0</td>
+        <td class="gray">4 credits per company</td>
+      </tr>
+      <tr class="act-row" data-calc="multiply" data-credits="1">
+        <td>People per Company</td>
+        <td><input type="number" class="qty" value="0" min="0" oninput="calculate('firms')"></td>
+        <td class="tc gray">people</td>
+        <td class="tc">1</td>
+        <td class="row-total">0</td>
+        <td class="gray">1 credit per company (people enrichment)</td>
+      </tr>
+      <tr class="act-row" data-calc="multiply" data-credits="1">
+        <td>Enrich Email Address</td>
+        <td><input type="number" class="qty" value="0" min="0" oninput="calculate('firms')"></td>
+        <td class="tc gray">email addresses</td>
+        <td class="tc">1</td>
+        <td class="row-total">0</td>
+        <td class="gray">1 credit each</td>
+      </tr>
+      <tr class="act-row" data-calc="multiply" data-credits="4">
+        <td>Enrich Phone Number</td>
+        <td><input type="number" class="qty" value="0" min="0" oninput="calculate('firms')"></td>
+        <td class="tc gray">phone numbers</td>
+        <td class="tc">4</td>
+        <td class="row-total">0</td>
+        <td class="gray">4 credits each</td>
+      </tr>
+      <tr class="act-row" data-calc="multiply" data-credits="60">
+        <td>Source Call Dial Attempts</td>
+        <td><input type="number" class="qty" value="0" min="0" oninput="calculate('firms')"></td>
+        <td class="tc gray">dial attempts</td>
+        <td class="tc">60</td>
+        <td class="row-total">0</td>
+        <td class="gray">60 credits per dial</td>
+      </tr>
+      <tr class="sp"><td colspan="6"></td></tr>
+
+      <!-- Credit Summary -->
+      <tr class="sec-hdr"><td colspan="6" style="background:#2E75B6">CREDIT SUMMARY</td></tr>
+      <tr class="cs-ttl">
+        <td class="lbl" colspan="4">Total Credits Needed</td>
+        <td class="val total-credits-val">0</td><td></td>
+      </tr>
+      <tr class="cs-inc">
+        <td colspan="4">Credits Included in Subscription</td>
+        <td class="val">5,000</td><td></td>
+      </tr>
+      <tr class="cs-add">
+        <td class="lbl" colspan="4">Additional Credits Needed</td>
+        <td class="val additional-credits-val">0</td><td></td>
+      </tr>
+      <tr class="sp"><td colspan="6"></td></tr>
+
+      <!-- Packages -->
+      <tr class="sec-hdr"><td colspan="6" style="background:#2E75B6">ADDITIONAL CREDIT PACKAGES</td></tr>
+      <tr class="col-hdr">
+        <th>Credits</th><th>Price</th><th>Discount</th><th>Per Credit</th><th></th><th>Recommended?</th>
+      </tr>
+      <tr class="pkg" data-credits="1000">  <td>1,000</td>  <td>$25</td>    <td class="no-disc">—</td>    <td class="per-cr">$0.0250</td><td></td><td class="rec"></td></tr>
+      <tr class="pkg" data-credits="2000">  <td>2,000</td>  <td>$48</td>    <td class="disc">-4%</td>     <td class="per-cr">$0.0240</td><td></td><td class="rec"></td></tr>
+      <tr class="pkg" data-credits="4000">  <td>4,000</td>  <td>$88</td>    <td class="disc">-12%</td>    <td class="per-cr">$0.0220</td><td></td><td class="rec"></td></tr>
+      <tr class="pkg" data-credits="15000"> <td>15,000</td> <td>$300</td>   <td class="disc">-20%</td>    <td class="per-cr">$0.0200</td><td></td><td class="rec"></td></tr>
+      <tr class="pkg" data-credits="25000"> <td>25,000</td> <td>$475</td>   <td class="disc">-24%</td>    <td class="per-cr">$0.0190</td><td></td><td class="rec"></td></tr>
+      <tr class="pkg" data-credits="70000"> <td>70,000</td> <td>$1,260</td> <td class="disc">-28%</td>    <td class="per-cr">$0.0180</td><td></td><td class="rec"></td></tr>
+      <tr class="pkg" data-credits="140000"><td>140,000</td><td>$2,380</td> <td class="disc">-32%</td>    <td class="per-cr">$0.0170</td><td></td><td class="rec"></td></tr>
+      <tr class="pkg" data-credits="280000"><td>280,000</td><td>$4,480</td> <td class="disc">-36%</td>    <td class="per-cr">$0.0160</td><td></td><td class="rec"></td></tr>
+      <tr class="pkg" data-credits="560000"><td>560,000</td><td>$8,400</td> <td class="disc">-40%</td>    <td class="per-cr">$0.0150</td><td></td><td class="rec"></td></tr>
+      <tr class="pkg" data-credits="700000"><td>700,000</td><td>$9,800</td> <td class="disc">-44%</td>    <td class="per-cr">$0.0140</td><td></td><td class="rec"></td></tr>
+      <tr class="overflow-warn"><td colspan="6">⚠&nbsp; Need exceeds largest package — contact OA for enterprise pricing</td></tr>
+      <tr class="sp"><td colspan="6"></td></tr>
+
+      <!-- Monthly Cost -->
+      <tr class="sec-hdr"><td colspan="6" style="background:#1F4E79">ESTIMATED MONTHLY COST</td></tr>
+      <tr class="cost-sub">
+        <td colspan="4">Sales Hub Subscription</td>
+        <td class="val">$199</td><td></td>
+      </tr>
+      <tr class="cost-add">
+        <td colspan="4">Additional Credit Package</td>
+        <td class="val cost-additional-val">$0</td>
+        <td class="side-note">← $0 if base plan covers it</td>
+      </tr>
+      <tr class="cost-ttl">
+        <td class="lbl" colspan="4">TOTAL ESTIMATED MONTHLY COST</td>
+        <td class="val cost-total-val">$199</td><td></td>
+      </tr>
+      <tr class="sp"><td colspan="6"></td></tr>
+
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ JOBS TAB ════════════════════════════════ -->
+<div id="jobs" class="tab-pane">
+  <div class="calc-wrap">
+    <div class="title-bar">OA Sales Hub — Credit Calculator &nbsp;|&nbsp; Explore by Jobs</div>
+    <table>
+
+      <!-- Monthly Subscription -->
+      <tr class="sec-hdr"><td colspan="6" style="background:#375623">MONTHLY SUBSCRIPTION</td></tr>
+      <tr class="sub-row">
+        <td class="lbl">Sales Hub Base Plan</td>
+        <td class="price">$199 / month</td>
+        <td class="note">Includes 5,000 credits</td>
+        <td></td>
+        <td class="credits-val">5,000</td>
+        <td class="unit">credits / month</td>
+      </tr>
+      <tr class="sp"><td colspan="6"></td></tr>
+
+      <!-- Activity Planner -->
+      <tr class="sec-hdr"><td colspan="6" style="background:#375623">ACTIVITY PLANNER — Enter quantities in the yellow cells</td></tr>
+      <tr class="col-hdr">
+        <th>Activity</th><th>Quantity</th><th>Unit</th><th>Credits / Unit</th><th>Total Credits</th><th>Notes</th>
+      </tr>
+
+      <tr class="sub-hdr"><td colspan="6" style="background:#EFFFEF;color:#1A4731">&nbsp;&nbsp;▶&nbsp; EXPLORE BY JOBS</td></tr>
+      <tr class="act-row" data-calc="multiply" data-credits="4">
+        <td>Job Listings to Search</td>
+        <td><input type="number" class="qty" value="0" min="0" oninput="calculate('jobs')"></td>
+        <td class="tc gray">job listings</td>
+        <td class="tc">4</td>
+        <td class="row-total">0</td>
+        <td class="gray">4 credits per listing</td>
+      </tr>
+
+      <tr class="sub-hdr"><td colspan="6" style="background:#EFFFEF;color:#1A4731">&nbsp;&nbsp;▶&nbsp; ENRICHMENT &amp; OUTREACH</td></tr>
+      <tr class="act-row" data-calc="multiply" data-credits="4">
+        <td>Enrich Company Data</td>
+        <td><input type="number" class="qty" value="0" min="0" oninput="calculate('jobs')"></td>
+        <td class="tc gray">companies</td>
+        <td class="tc">4</td>
+        <td class="row-total">0</td>
+        <td class="gray">4 credits per company</td>
+      </tr>
+      <tr class="act-row" data-calc="multiply" data-credits="1">
+        <td>People per Company</td>
+        <td><input type="number" class="qty" value="0" min="0" oninput="calculate('jobs')"></td>
+        <td class="tc gray">people</td>
+        <td class="tc">1</td>
+        <td class="row-total">0</td>
+        <td class="gray">1 credit per company (people enrichment)</td>
+      </tr>
+      <tr class="act-row" data-calc="multiply" data-credits="1">
+        <td>Enrich Email Address</td>
+        <td><input type="number" class="qty" value="0" min="0" oninput="calculate('jobs')"></td>
+        <td class="tc gray">email addresses</td>
+        <td class="tc">1</td>
+        <td class="row-total">0</td>
+        <td class="gray">1 credit each</td>
+      </tr>
+      <tr class="act-row" data-calc="multiply" data-credits="4">
+        <td>Enrich Phone Number</td>
+        <td><input type="number" class="qty" value="0" min="0" oninput="calculate('jobs')"></td>
+        <td class="tc gray">phone numbers</td>
+        <td class="tc">4</td>
+        <td class="row-total">0</td>
+        <td class="gray">4 credits each</td>
+      </tr>
+      <tr class="act-row" data-calc="multiply" data-credits="60">
+        <td>Source Call Dial Attempts</td>
+        <td><input type="number" class="qty" value="0" min="0" oninput="calculate('jobs')"></td>
+        <td class="tc gray">dial attempts</td>
+        <td class="tc">60</td>
+        <td class="row-total">0</td>
+        <td class="gray">60 credits per dial</td>
+      </tr>
+      <tr class="sp"><td colspan="6"></td></tr>
+
+      <!-- Credit Summary -->
+      <tr class="sec-hdr"><td colspan="6" style="background:#375623">CREDIT SUMMARY</td></tr>
+      <tr class="cs-ttl">
+        <td class="lbl" colspan="4">Total Credits Needed</td>
+        <td class="val total-credits-val">0</td><td></td>
+      </tr>
+      <tr class="cs-inc">
+        <td colspan="4">Credits Included in Subscription</td>
+        <td class="val">5,000</td><td></td>
+      </tr>
+      <tr class="cs-add">
+        <td class="lbl" colspan="4">Additional Credits Needed</td>
+        <td class="val additional-credits-val">0</td><td></td>
+      </tr>
+      <tr class="sp"><td colspan="6"></td></tr>
+
+      <!-- Packages -->
+      <tr class="sec-hdr"><td colspan="6" style="background:#375623">ADDITIONAL CREDIT PACKAGES</td></tr>
+      <tr class="col-hdr">
+        <th>Credits</th><th>Price</th><th>Discount</th><th>Per Credit</th><th></th><th>Recommended?</th>
+      </tr>
+      <tr class="pkg" data-credits="1000">  <td>1,000</td>  <td>$25</td>    <td class="no-disc">—</td>    <td class="per-cr">$0.0250</td><td></td><td class="rec"></td></tr>
+      <tr class="pkg" data-credits="2000">  <td>2,000</td>  <td>$48</td>    <td class="disc">-4%</td>     <td class="per-cr">$0.0240</td><td></td><td class="rec"></td></tr>
+      <tr class="pkg" data-credits="4000">  <td>4,000</td>  <td>$88</td>    <td class="disc">-12%</td>    <td class="per-cr">$0.0220</td><td></td><td class="rec"></td></tr>
+      <tr class="pkg" data-credits="15000"> <td>15,000</td> <td>$300</td>   <td class="disc">-20%</td>    <td class="per-cr">$0.0200</td><td></td><td class="rec"></td></tr>
+      <tr class="pkg" data-credits="25000"> <td>25,000</td> <td>$475</td>   <td class="disc">-24%</td>    <td class="per-cr">$0.0190</td><td></td><td class="rec"></td></tr>
+      <tr class="pkg" data-credits="70000"> <td>70,000</td> <td>$1,260</td> <td class="disc">-28%</td>    <td class="per-cr">$0.0180</td><td></td><td class="rec"></td></tr>
+      <tr class="pkg" data-credits="140000"><td>140,000</td><td>$2,380</td> <td class="disc">-32%</td>    <td class="per-cr">$0.0170</td><td></td><td class="rec"></td></tr>
+      <tr class="pkg" data-credits="280000"><td>280,000</td><td>$4,480</td> <td class="disc">-36%</td>    <td class="per-cr">$0.0160</td><td></td><td class="rec"></td></tr>
+      <tr class="pkg" data-credits="560000"><td>560,000</td><td>$8,400</td> <td class="disc">-40%</td>    <td class="per-cr">$0.0150</td><td></td><td class="rec"></td></tr>
+      <tr class="pkg" data-credits="700000"><td>700,000</td><td>$9,800</td> <td class="disc">-44%</td>    <td class="per-cr">$0.0140</td><td></td><td class="rec"></td></tr>
+      <tr class="overflow-warn"><td colspan="6">⚠&nbsp; Need exceeds largest package — contact OA for enterprise pricing</td></tr>
+      <tr class="sp"><td colspan="6"></td></tr>
+
+      <!-- Monthly Cost -->
+      <tr class="sec-hdr"><td colspan="6" style="background:#1F4E79">ESTIMATED MONTHLY COST</td></tr>
+      <tr class="cost-sub">
+        <td colspan="4">Sales Hub Subscription</td>
+        <td class="val">$199</td><td></td>
+      </tr>
+      <tr class="cost-add">
+        <td colspan="4">Additional Credit Package</td>
+        <td class="val cost-additional-val">$0</td>
+        <td class="side-note">← $0 if base plan covers it</td>
+      </tr>
+      <tr class="cost-ttl">
+        <td class="lbl" colspan="4">TOTAL ESTIMATED MONTHLY COST</td>
+        <td class="val cost-total-val">$199</td><td></td>
+      </tr>
+      <tr class="sp"><td colspan="6"></td></tr>
+
+    </table>
+  </div>
+</div>
+
+<script>
+  const PACKAGES = [
+    {credits: 1000,   price: 25},
+    {credits: 2000,   price: 48},
+    {credits: 4000,   price: 88},
+    {credits: 15000,  price: 300},
+    {credits: 25000,  price: 475},
+    {credits: 70000,  price: 1260},
+    {credits: 140000, price: 2380},
+    {credits: 280000, price: 4480},
+    {credits: 560000, price: 8400},
+    {credits: 700000, price: 9800},
+  ];
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('firms-active', 'jobs-active'));
+    document.getElementById(tab).classList.add('active');
+    const btns = document.querySelectorAll('.tab-btn');
+    if (tab === 'firms') btns[0].classList.add('firms-active');
+    else                 btns[1].classList.add('jobs-active');
+  }
+
+  function calculate(tabId) {
+    const pane = document.getElementById(tabId);
+    let total = 0;
+
+    pane.querySelectorAll('.act-row').forEach(row => {
+      const input     = row.querySelector('input.qty');
+      const totalCell = row.querySelector('.row-total');
+      if (!input || !totalCell) return;
+
+      const qty    = parseInt(input.value) || 0;
+      const creds  = parseFloat(row.dataset.credits);
+      const calc   = row.dataset.calc;
+
+      const rowTotal = (calc === 'ceiling')
+        ? (qty === 0 ? 0 : Math.ceil(qty / 100) * creds)
+        : qty * creds;
+
+      totalCell.textContent = rowTotal.toLocaleString('en-US');
+      total += rowTotal;
+    });
+
+    const included   = 5000;
+    const additional = Math.max(0, total - included);
+
+    pane.querySelector('.total-credits-val').textContent    = total.toLocaleString('en-US');
+    pane.querySelector('.additional-credits-val').textContent = additional.toLocaleString('en-US');
+
+    // Best fit package
+    let bestFit = null, pkgCost = 0;
+    if (additional > 0) {
+      bestFit = PACKAGES.find(p => p.credits >= additional);
+      pkgCost = bestFit ? bestFit.price : PACKAGES[PACKAGES.length - 1].price;
+    }
+
+    pane.querySelectorAll('.pkg').forEach(row => {
+      const rec = row.querySelector('.rec');
+      if (bestFit && parseInt(row.dataset.credits) === bestFit.credits) {
+        rec.textContent = '◀  BEST FIT';
+        row.classList.add('best');
+      } else {
+        rec.textContent = '';
+        row.classList.remove('best');
+      }
+    });
+
+    // Overflow warning
+    pane.querySelector('.overflow-warn').style.display =
+      additional > 700000 ? 'table-row' : 'none';
+
+    // Cost
+    pane.querySelector('.cost-additional-val').textContent = '$' + pkgCost.toLocaleString('en-US');
+    pane.querySelector('.cost-total-val').textContent      = '$' + (199 + pkgCost).toLocaleString('en-US');
+  }
+</script>
+</body>
+</html>
