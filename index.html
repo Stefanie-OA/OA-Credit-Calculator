@@ -273,13 +273,21 @@
         <td class="row-total">0</td>
         <td class="gray">4 credits each</td>
       </tr>
-      <tr class="act-row" data-calc="multiply" data-credits="60">
-        <td>Source Call Dial Attempts</td>
-        <td><input type="number" class="qty" value="0" min="0" oninput="calculate('firms')"></td>
-        <td class="tc gray">dial attempts</td>
+      <tr class="act-row" data-calc="none">
+        <td>Source Call — Contacts to Dial</td>
+        <td><input type="number" class="qty" id="firms-dial-contacts" value="0" min="0" oninput="calcDial('firms')"></td>
+        <td class="tc gray">contacts</td>
+        <td class="tc gray">—</td>
+        <td class="row-total" style="color:#aaa">—</td>
+        <td class="gray">Number of people you are calling</td>
+      </tr>
+      <tr class="act-row" data-calc="none">
+        <td>Source Call — Attempts per Contact</td>
+        <td><input type="number" class="qty" id="firms-dial-attempts" value="1" min="1" oninput="calcDial('firms')"></td>
+        <td class="tc gray">× per contact</td>
         <td class="tc">60</td>
-        <td class="row-total">0</td>
-        <td class="gray">60 credits per dial</td>
+        <td class="row-total" id="firms-dial-total">0</td>
+        <td class="gray">60 credits × contacts × attempts</td>
       </tr>
       <tr class="sp"><td colspan="6"></td></tr>
 
@@ -405,13 +413,21 @@
         <td class="row-total">0</td>
         <td class="gray">4 credits each</td>
       </tr>
-      <tr class="act-row" data-calc="multiply" data-credits="60">
-        <td>Source Call Dial Attempts</td>
-        <td><input type="number" class="qty" value="0" min="0" oninput="calculate('jobs')"></td>
-        <td class="tc gray">dial attempts</td>
+      <tr class="act-row" data-calc="none">
+        <td>Source Call — Contacts to Dial</td>
+        <td><input type="number" class="qty" id="jobs-dial-contacts" value="0" min="0" oninput="calcDial('jobs')"></td>
+        <td class="tc gray">contacts</td>
+        <td class="tc gray">—</td>
+        <td class="row-total" style="color:#aaa">—</td>
+        <td class="gray">Number of people you are calling</td>
+      </tr>
+      <tr class="act-row" data-calc="none">
+        <td>Source Call — Attempts per Contact</td>
+        <td><input type="number" class="qty" id="jobs-dial-attempts" value="1" min="1" oninput="calcDial('jobs')"></td>
+        <td class="tc gray">× per contact</td>
         <td class="tc">60</td>
-        <td class="row-total">0</td>
-        <td class="gray">60 credits per dial</td>
+        <td class="row-total" id="jobs-dial-total">0</td>
+        <td class="gray">60 credits × contacts × attempts</td>
       </tr>
       <tr class="sp"><td colspan="6"></td></tr>
 
@@ -493,6 +509,14 @@
     else                 btns[1].classList.add('jobs-active');
   }
 
+  function calcDial(tabId) {
+    const contacts = parseInt(document.getElementById(tabId + '-dial-contacts').value) || 0;
+    const attempts = parseInt(document.getElementById(tabId + '-dial-attempts').value) || 0;
+    const dialTotal = contacts * attempts * 60;
+    document.getElementById(tabId + '-dial-total').textContent = dialTotal.toLocaleString('en-US');
+    calculate(tabId);
+  }
+
   function calculate(tabId) {
     const pane = document.getElementById(tabId);
     let total = 0;
@@ -502,9 +526,11 @@
       const totalCell = row.querySelector('.row-total');
       if (!input || !totalCell) return;
 
-      const qty    = parseInt(input.value) || 0;
-      const creds  = parseFloat(row.dataset.credits);
-      const calc   = row.dataset.calc;
+      const calc = row.dataset.calc;
+      if (calc === 'none') return; // handled separately by calcDial()
+
+      const qty   = parseInt(input.value) || 0;
+      const creds = parseFloat(row.dataset.credits);
 
       const rowTotal = (calc === 'ceiling')
         ? (qty === 0 ? 0 : Math.ceil(qty / 100) * creds)
@@ -513,6 +539,12 @@
       totalCell.textContent = rowTotal.toLocaleString('en-US');
       total += rowTotal;
     });
+
+    // Add dial total (computed separately by calcDial)
+    const dialTotalEl = document.getElementById(tabId + '-dial-total');
+    if (dialTotalEl) {
+      total += parseInt(dialTotalEl.textContent.replace(/,/g, '')) || 0;
+    }
 
     const included   = 5000;
     const additional = Math.max(0, total - included);
